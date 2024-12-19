@@ -1,32 +1,30 @@
-const express = require("express")
-const app = express()
-import {YoutubeTranscript} from 'youtube-transcript';
+import express from "express";
+import { YoutubeTranscript } from "youtube-transcript";
 
-YoutubeTranscript.fetchTranscript("https://youtu.be/Q5WHoq-YxFE").then(console.log)
+const app = express();
 
-app.get("/url", async (req, res) => {
+app.get("/transcript", async (req, res) => {
   const videoUrl = req.query.url;
 
   if (!videoUrl) {
-    return res.status(400).send("URL is required");
+    return res.status(400).json({ error: "URL is required" });
   }
 
   try {
-    // Get video info
-    const info = await ytdl.getInfo(videoUrl);
-    const format = ytdl.chooseFormat(info.formats, { quality: "highest" });
+    const transcript = await YoutubeTranscript.fetchTranscript(videoUrl);
 
-    // Set headers for download
-    res.header(
-      "Content-Disposition",
-      `attachment; filename="${info.videoDetails.title}.mp4"`,
-    );
-    res.header("Content-Type", "video/mp4");
+    if (!transcript || transcript.length === 0) {
+      return res.status(404).json({ error: "Transcript not found" });
+    }
 
-    // Stream video
-    ytdl(videoUrl, { format }).pipe(res);
+    return res.status(200).json({ transcript });
   } catch (error) {
-    console.error("Error downloading video:", error);
-    res.status(500).send("Error downloading video");
+    console.error("Error fetching transcript:", error.message);
+    return res.status(500).json({ error: "Failed to fetch transcript" });
   }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
